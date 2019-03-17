@@ -14,7 +14,6 @@ class MyPiCamera():
     """
     def __init__(self):
         self.camera = None
-        self.filename = None
 
     def capture_photo(self, width, height, filename):
         """
@@ -24,7 +23,8 @@ class MyPiCamera():
             camera.resolution = width, height  # 画像サイズ設定
             camera.hflip = True                # 水平反転
             camera.vflip = True                # 垂直反転
-            time.sleep(2)                      # カメラ初期化
+
+            time.sleep(2)                      # カメラ起動待ち
             camera.capture(filename)           # 静止画撮影
 
     def start_video(self, width, height, filename):
@@ -33,12 +33,13 @@ class MyPiCamera():
         """
         try:
             self.camera = picamera.PiCamera()
+
             self.camera.resolution = width, height  # 画像サイズ設定
             self.camera.hflip = True                # 水平反転
             self.camera.vflip = True                # 垂直反転
-            self.camera.start_recording(filename)   # 動画撮影
 
-            self.filename = filename
+            time.sleep(2)                           # カメラ起動待ち
+            self.camera.start_recording(filename)   # 動画撮影
 
         except:
             self.stop_video()
