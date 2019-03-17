@@ -41,8 +41,7 @@ class MyPiCamera():
             self.filename = filename
 
         except:
-            self.camera.stop_recording()  # 撮影停止
-            self.camera.close()
+            self.stop_video()
 
     def stop_video(self):
         """
