@@ -8,17 +8,57 @@ import time
 import picamera
 
 
-def photo(width, height, filename):
+class MyPiCamera():
     """
-    写真を撮影する
+    picameraによる写真と動画の撮影
     """
-    with picamera.PiCamera() as camera:
-        camera.resolution = width, height  # 画像サイズ設定
-        camera.hflip = True                # 水平反転
-        camera.vflip = True                # 垂直反転
-        time.sleep(3)                      # カメラ初期化
-        camera.capture(filename)           # 静止画撮影
+    def __init__(self):
+        self.camera = None
+        self.filename = None
+
+    def capture_photo(self, width, height, filename):
+        """
+        写真を撮影する
+        """
+        with picamera.PiCamera() as camera:
+            camera.resolution = width, height  # 画像サイズ設定
+            camera.hflip = True                # 水平反転
+            camera.vflip = True                # 垂直反転
+            time.sleep(2)                      # カメラ初期化
+            camera.capture(filename)           # 静止画撮影
+
+    def start_video(self, width, height, filename):
+        """
+        動画撮影を開始する
+        """
+        try:
+            self.camera = picamera.PiCamera()
+            self.camera.resolution = width, height  # 画像サイズ設定
+            self.camera.hflip = True                # 水平反転
+            self.camera.vflip = True                # 垂直反転
+            self.camera.start_recording(filename)   # 動画撮影
+
+            self.filename = filename
+
+        except:
+            self.camera.stop_recording()  # 撮影停止
+            self.camera.close()
+
+    def stop_video(self):
+        """
+        動画撮影を停止する
+        """
+        self.camera.stop_recording()  # 撮影停止
+        self.camera.close()
 
 
 if __name__ == '__main__':
-    photo(720, 960, './photo.jpg')
+    CAMERA = MyPiCamera()
+
+    # 写真撮影
+    CAMERA.capture_photo(720, 960, './photo.jpg')
+
+    # ビデオ撮影
+    CAMERA.start_video(240, 320, './video.h264')
+    time.sleep(10)
+    CAMERA.stop_video()
