@@ -51,6 +51,13 @@ class SG90():
         self.cnter_angle = (self.min_angle + self.max_angle) // 2
         self.resolution = resolution
         self.pwm = None
+        self.setup()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ex_type, ex_value, trace):
+        self.cleanup()
 
     def setup(self):
         """
@@ -60,8 +67,8 @@ class SG90():
             GPIO.setmode(GPIO.BCM)           # select GPIO by pin-name of Raspberry-Pi
             GPIO.setup(self.gpio, GPIO.OUT)  # set GPIO for output
 
-            self.pwm = GPIO.PWM(self.gpio, self.frequency)                    # create PWM-object
-            self.pwm.start(self.angle2dutyratio(self.cnter_angle) * PERCENT)  # start PWM-output
+            self.pwm = GPIO.PWM(self.gpio, self.frequency)  # create PWM-object
+            self.pwm.start(0.0)                             # start PWM-output
 
         except:
             self.cleanup()
@@ -168,22 +175,19 @@ class SG90HW(SG90):
             time.sleep(STEP_WAIT)
 
 
-def swing_servo(servo):
-    """
-    swing servo
-    """
-    servo.setup()
-
-    try:
-        servo.center()
-        servo.swing()
-
-    finally:
-        servo.cleanup()
-
-
 if __name__ == '__main__':
-    swing_servo(SG90(18))
-    swing_servo(SG90(19))
-    swing_servo(SG90HW(18))
-    swing_servo(SG90HW(19))
+    with SG90(18) as s:
+        s.center()
+        s.swing()
+
+    with SG90(19) as s:
+        s.center()
+        s.swing()
+
+    with SG90HW(18) as s:
+        s.center()
+        s.swing()
+
+    with SG90HW(19) as s:
+        s.center()
+        s.swing()
