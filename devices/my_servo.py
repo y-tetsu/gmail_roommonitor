@@ -46,23 +46,16 @@ class MyServo():
         """
         GPIO.cleanup()
 
-    def point_move(self, duty):
+    def move(self, duty):
         """
-        ポイント移動
+        移動
         """
         duty = self.guard_duty(duty)
         self.pwm.ChangeDutyCycle(float(duty) / 200)
-        time.sleep(INTERVAL)
 
-    def point_center(self):
+    def rotate(self, src_duty, dst_duty, step):
         """
-        中央にポイント移動
-        """
-        self.point_move(self.center_duty)
-
-    def lenear_move(self, src_duty, dst_duty, step):
-        """
-        直線移動
+        回転
         """
         src_duty = self.guard_duty(src_duty)
         dst_duty = self.guard_duty(dst_duty)
@@ -71,15 +64,23 @@ class MyServo():
             self.pwm.ChangeDutyCycle(float(duty) / 200)
             time.sleep(STEP_WAIT)
 
+    def center(self):
+        """
+        中央に移動
+        """
+        self.move(self.center_duty)
         time.sleep(INTERVAL)
 
     def swing(self):
         """
         振る
         """
-        self.lenear_move(self.center_duty, self.max_duty, self.step)
-        self.lenear_move(self.max_duty, self.min_duty, -self.step)
-        self.lenear_move(self.min_duty, self.center_duty, self.step)
+        self.rotate(self.center_duty, self.max_duty, self.step)
+        time.sleep(INTERVAL)
+        self.rotate(self.max_duty, self.min_duty, -self.step)
+        time.sleep(INTERVAL)
+        self.rotate(self.min_duty, self.center_duty, self.step)
+        time.sleep(INTERVAL)
 
     def guard_duty(self, duty):
         """
@@ -118,15 +119,14 @@ class MyServoHW(MyServo):
         self.pwm.set_mode(self.gpio, pigpio.INPUT)  # 入力に戻す
         self.pwm.stop()
 
-    def point_move(self, duty):
+    def move(self, duty):
         """
         ポイント移動
         """
         duty = self.guard_duty(duty)
         self.pwm.hardware_PWM(self.gpio, self.frequency, duty * 100)
-        time.sleep(INTERVAL)
 
-    def lenear_move(self, src_duty, dst_duty, step):
+    def rotate(self, src_duty, dst_duty, step):
         """
         直線移動
         """
@@ -137,8 +137,6 @@ class MyServoHW(MyServo):
             self.pwm.hardware_PWM(self.gpio, self.frequency, duty * 100)
             time.sleep(STEP_WAIT)
 
-        time.sleep(INTERVAL)
-
 
 def swing_servo(servo):
     """
@@ -147,7 +145,7 @@ def swing_servo(servo):
     servo.setup()
 
     try:
-        servo.point_center()
+        servo.center()
         servo.swing()
 
     finally:
