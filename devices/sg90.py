@@ -26,7 +26,7 @@ MIN_DUTY_RATIO = MIN_DUTY_CYCLE / PWM_PERIOD
 MAX_DUTY_RATIO = MAX_DUTY_CYCLE / PWM_PERIOD
 
 STEP_WAIT = 0.005
-INTERVAL = 0.5
+SWING_INTERVAL = 0.5
 
 PERCENT = 100
 MEGA = 1000000
@@ -77,7 +77,7 @@ class SG90():
         """
         GPIO cleanup
         """
-        GPIO.cleanup()
+        GPIO.cleanup(self.gpio)
 
     def move(self, angle):
         """
@@ -101,18 +101,19 @@ class SG90():
         move to center
         """
         self.move(self.cnter_angle)
-        time.sleep(INTERVAL)
+        time.sleep(STEP_WAIT)
 
     def swing(self):
         """
         swing
         """
+        time.sleep(SWING_INTERVAL)
         self.rotate(self.cnter_angle, self.max_angle)
-        time.sleep(INTERVAL)
+        time.sleep(SWING_INTERVAL)
         self.rotate(self.max_angle, self.min_angle, -1)
-        time.sleep(INTERVAL)
+        time.sleep(SWING_INTERVAL)
         self.rotate(self.min_angle, self.cnter_angle)
-        time.sleep(INTERVAL)
+        time.sleep(SWING_INTERVAL)
 
     def angle2dutyratio(self, angle):
         """
@@ -176,18 +177,16 @@ class SG90HW(SG90):
 
 
 if __name__ == '__main__':
-    with SG90(18) as s:
-        s.center()
-        s.swing()
+    with SG90(18) as s1:
+        with SG90(19) as s2:
+            s1.center()
+            s2.center()
+            s1.swing()
+            s2.swing()
 
-    with SG90(19) as s:
-        s.center()
-        s.swing()
-
-    with SG90HW(18) as s:
-        s.center()
-        s.swing()
-
-    with SG90HW(19) as s:
-        s.center()
-        s.swing()
+    with SG90HW(18) as s1:
+        with SG90HW(19) as s2:
+            s1.center()
+            s2.center()
+            s1.swing()
+            s2.swing()
