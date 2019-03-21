@@ -2,11 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 サーボモータ(SG90)の操作
+ -------------------------------------------------
+ Support SG90-Specification
+ -------------------------------------------------
+ PWM Period : 20ms(50Hz)
+ Duty Cycle : 1 - 2 ms (5.0% - 10.0%)(-90° - +90°)
+ -------------------------------------------------
 """
 
 import time
 import RPi.GPIO as GPIO
 import pigpio
+
+FREQUENCY = 50  # Hz
 
 STEP_WAIT = 0.005
 INTERVAL = 0.5
@@ -15,10 +23,17 @@ INTERVAL = 0.5
 class MyServo():
     """
     ソフトウェアPWMによるサーボモータ(SG90)の操作
+      -----------------------------
+      input   : duty ratio
+      -----------------------------
+      100.00% : 1.000
+       10.00% : 0.100(2.0ms : +90°)
+        5.00% : 0.050(1.0ms : -90°)
+      -----------------------------
     """
-    def __init__(self, gpio, frequency=50, min_duty=1300, max_duty=1900, step=1):
+    def __init__(self, gpio, min_duty=500, max_duty=1000, step=1):
         self.gpio = gpio
-        self.frequency = frequency
+        self.frequency = FREQUENCY
         self.min_duty = min_duty
         self.max_duty = max_duty
         self.center_duty = (self.min_duty + self.max_duty) // 2
@@ -35,7 +50,7 @@ class MyServo():
             GPIO.setup(self.gpio, GPIO.OUT)  # GPIOを出力に設定
 
             self.pwm = GPIO.PWM(self.gpio, self.frequency)  # PWMオブジェクト取得
-            self.pwm.start(float(self.center_duty) / 200)   # PWM出力を開始
+            self.pwm.start(float(self.center_duty) / 100)   # PWM出力を開始
 
         except:
             self.cleanup()
@@ -51,7 +66,7 @@ class MyServo():
         移動
         """
         duty = self.guard_duty(duty)
-        self.pwm.ChangeDutyCycle(float(duty) / 200)
+        self.pwm.ChangeDutyCycle(float(duty) / 100)
 
     def rotate(self, src_duty, dst_duty, step):
         """
@@ -61,7 +76,7 @@ class MyServo():
         dst_duty = self.guard_duty(dst_duty)
 
         for duty in range(src_duty, dst_duty, step):
-            self.pwm.ChangeDutyCycle(float(duty) / 200)
+            self.pwm.ChangeDutyCycle(float(duty) / 100)
             time.sleep(STEP_WAIT)
 
     def center(self):
@@ -97,9 +112,16 @@ class MyServo():
 class MyServoHW(MyServo):
     """
     ハードウェアPWMによるサーボモータ(SG90)の操作
+      -----------------------------
+      input   : duty ratio
+      -----------------------------
+      1000000 : 1.000
+       100000 : 0.100(2.0ms : +90°)
+        50000 : 0.050(1.0ms : -90°)
+      -----------------------------
     """
-    def __init__(self, gpio, frequency=100, min_duty=1300, max_duty=1900, step=1):
-        super().__init__(gpio, frequency, min_duty, max_duty, step)
+    def __init__(self, gpio, min_duty=500, max_duty=1000, step=1):
+        super().__init__(gpio, min_duty, max_duty, step)
 
     def setup(self):
         """
@@ -121,14 +143,14 @@ class MyServoHW(MyServo):
 
     def move(self, duty):
         """
-        ポイント移動
+        移動
         """
         duty = self.guard_duty(duty)
         self.pwm.hardware_PWM(self.gpio, self.frequency, duty * 100)
 
     def rotate(self, src_duty, dst_duty, step):
         """
-        直線移動
+        回転
         """
         src_duty = self.guard_duty(src_duty)
         dst_duty = self.guard_duty(dst_duty)
