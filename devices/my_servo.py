@@ -14,10 +14,22 @@ import time
 import RPi.GPIO as GPIO
 import pigpio
 
-FREQUENCY = 50  # Hz
+FREQUENCY = 50      # Hz
+ANGLE_MARGIN = 5    # °
+MIN_DUTY_CYCLE = 1  # ms
+MAX_DUTY_CYCLE = 2  # ms
+MIN_ANGLE = -90     # °
+MAX_ANGLE = 90      # °
+
+PWM_PERIOD = float(1.0 / FREQUENCY) * 1000.0  # ms
+MIN_DUTY_RATIO = MIN_DUTY_CYCLE / PWM_PERIOD
+MAX_DUTY_RATIO = MAX_DUTY_CYCLE / PWM_PERIOD
 
 STEP_WAIT = 0.005
 INTERVAL = 0.5
+
+PERCENT = 100
+MEGA = 1000000
 
 
 class MyServo():
@@ -31,13 +43,13 @@ class MyServo():
         5.00% : 0.050(1.0ms : -90°)
       -----------------------------
     """
-    def __init__(self, gpio, min_duty=500, max_duty=1000, step=1):
+    def __init__(self, gpio, min_angle=-90, max_angle=90, resolution=0.25):
         self.gpio = gpio
         self.frequency = FREQUENCY
-        self.min_duty = min_duty
-        self.max_duty = max_duty
-        self.center_duty = (self.min_duty + self.max_duty) // 2
-        self.step = step
+        self.min_angle = min_angle
+        self.max_angle = max_angle
+        self.cnter_angle = (self.min_angle + self.max_angle) // 2
+        self.resolution = resolution
         self.pwm = None
 
     def setup(self):
@@ -49,8 +61,8 @@ class MyServo():
             GPIO.setmode(GPIO.BCM)           # GPIOをラズパイのピン名で指定する
             GPIO.setup(self.gpio, GPIO.OUT)  # GPIOを出力に設定
 
-            self.pwm = GPIO.PWM(self.gpio, self.frequency)  # PWMオブジェクト取得
-            self.pwm.start(float(self.center_duty) / 100)   # PWM出力を開始
+            self.pwm = GPIO.PWM(self.gpio, self.frequency)                    # PWMオブジェクト取得
+            self.pwm.start(self.angle2dutyratio(self.cnter_angle) * PERCENT)  # PWM出力を開始
 
         except:
             self.cleanup()
@@ -61,52 +73,53 @@ class MyServo():
         """
         GPIO.cleanup()
 
-    def move(self, duty):
+    def move(self, angle):
         """
         移動
         """
-        duty = self.guard_duty(duty)
-        self.pwm.ChangeDutyCycle(float(duty) / 100)
+        self.pwm.ChangeDutyCycle(self.angle2dutyratio(angle) * PERCENT)
 
-    def rotate(self, src_duty, dst_duty, step):
+    def rotate(self, src_angle, dst_angle, step=1):
         """
         回転
         """
-        src_duty = self.guard_duty(src_duty)
-        dst_duty = self.guard_duty(dst_duty)
+        start = int(src_angle / self.resolution)
+        end = int(dst_angle / self.resolution) + 1
 
-        for duty in range(src_duty, dst_duty, step):
-            self.pwm.ChangeDutyCycle(float(duty) / 100)
+        for angle in range(start, end, step):
+            self.pwm.ChangeDutyCycle(self.angle2dutyratio(angle * self.resolution) * PERCENT)
             time.sleep(STEP_WAIT)
 
     def center(self):
         """
         中央に移動
         """
-        self.move(self.center_duty)
+        self.move(self.cnter_angle)
         time.sleep(INTERVAL)
 
     def swing(self):
         """
         振る
         """
-        self.rotate(self.center_duty, self.max_duty, self.step)
+        self.rotate(self.cnter_angle, self.max_angle)
         time.sleep(INTERVAL)
-        self.rotate(self.max_duty, self.min_duty, -self.step)
+        self.rotate(self.max_angle, self.min_angle, -1)
         time.sleep(INTERVAL)
-        self.rotate(self.min_duty, self.center_duty, self.step)
+        self.rotate(self.min_angle, self.cnter_angle)
         time.sleep(INTERVAL)
 
-    def guard_duty(self, duty):
+    def angle2dutyratio(self, angle):
         """
-        デューティーの上下限ガード
+        角度をDuty比に変換
         """
-        if duty < self.min_duty:
-            duty = self.min_duty
-        elif duty > self.max_duty:
-            duty = self.max_duty
+        if angle < self.min_angle + ANGLE_MARGIN:
+            angle = self.min_angle + ANGLE_MARGIN
+        elif angle > self.max_angle - ANGLE_MARGIN:
+            angle = self.max_angle - ANGLE_MARGIN
 
-        return duty
+        duty_ratio = (MIN_DUTY_RATIO + (MAX_DUTY_RATIO - MIN_DUTY_RATIO) * (angle + -MIN_ANGLE) / (MAX_ANGLE - MIN_ANGLE))
+
+        return duty_ratio
 
 
 class MyServoHW(MyServo):
@@ -120,9 +133,6 @@ class MyServoHW(MyServo):
         50000 : 0.050(1.0ms : -90°)
       -----------------------------
     """
-    def __init__(self, gpio, min_duty=500, max_duty=1000, step=1):
-        super().__init__(gpio, min_duty, max_duty, step)
-
     def setup(self):
         """
         GPIOのセットアップ
@@ -141,22 +151,21 @@ class MyServoHW(MyServo):
         self.pwm.set_mode(self.gpio, pigpio.INPUT)  # 入力に戻す
         self.pwm.stop()
 
-    def move(self, duty):
+    def move(self, angle):
         """
         移動
         """
-        duty = self.guard_duty(duty)
-        self.pwm.hardware_PWM(self.gpio, self.frequency, duty * 100)
+        self.pwm.hardware_PWM(self.gpio, self.frequency, int(self.angle2dutyratio(angle) * MEGA))
 
-    def rotate(self, src_duty, dst_duty, step):
+    def rotate(self, src_angle, dst_angle, step=1):
         """
         回転
         """
-        src_duty = self.guard_duty(src_duty)
-        dst_duty = self.guard_duty(dst_duty)
+        start = int(src_angle / self.resolution)
+        end = int(dst_angle / self.resolution) + 1
 
-        for duty in range(src_duty, dst_duty, step):
-            self.pwm.hardware_PWM(self.gpio, self.frequency, duty * 100)
+        for angle in range(start, end, step):
+            self.pwm.hardware_PWM(self.gpio, self.frequency, int(self.angle2dutyratio(angle * self.resolution) * MEGA))
             time.sleep(STEP_WAIT)
 
 
