@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-サーボモータ(SG90)の操作
+Control of SG90
  -------------------------------------------------
  Support SG90-Specification
  -------------------------------------------------
@@ -32,9 +32,9 @@ PERCENT = 100
 MEGA = 1000000
 
 
-class MyServo():
+class SG90():
     """
-    ソフトウェアPWMによるサーボモータ(SG90)の操作
+    Control of SG90 by Software-PWM
       -----------------------------
       input   : duty ratio
       -----------------------------
@@ -54,34 +54,33 @@ class MyServo():
 
     def setup(self):
         """
-        GPIOのセットアップ
+        GPIO setup
         """
         try:
-            # GPIO準備
-            GPIO.setmode(GPIO.BCM)           # GPIOをラズパイのピン名で指定する
-            GPIO.setup(self.gpio, GPIO.OUT)  # GPIOを出力に設定
+            GPIO.setmode(GPIO.BCM)           # select GPIO by pin-name of Raspberry-Pi
+            GPIO.setup(self.gpio, GPIO.OUT)  # set GPIO for output
 
-            self.pwm = GPIO.PWM(self.gpio, self.frequency)                    # PWMオブジェクト取得
-            self.pwm.start(self.angle2dutyratio(self.cnter_angle) * PERCENT)  # PWM出力を開始
+            self.pwm = GPIO.PWM(self.gpio, self.frequency)                    # create PWM-object
+            self.pwm.start(self.angle2dutyratio(self.cnter_angle) * PERCENT)  # start PWM-output
 
         except:
             self.cleanup()
 
     def cleanup(self):
         """
-        GPIOのクリーンアップ
+        GPIO cleanup
         """
         GPIO.cleanup()
 
     def move(self, angle):
         """
-        移動
+        move to angle
         """
         self.pwm.ChangeDutyCycle(self.angle2dutyratio(angle) * PERCENT)
 
     def rotate(self, src_angle, dst_angle, step=1):
         """
-        回転
+        rotate from src_angle to dst_angle
         """
         start = int(src_angle / self.resolution)
         end = int(dst_angle / self.resolution) + 1
@@ -92,14 +91,14 @@ class MyServo():
 
     def center(self):
         """
-        中央に移動
+        move to center
         """
         self.move(self.cnter_angle)
         time.sleep(INTERVAL)
 
     def swing(self):
         """
-        振る
+        swing
         """
         self.rotate(self.cnter_angle, self.max_angle)
         time.sleep(INTERVAL)
@@ -110,7 +109,7 @@ class MyServo():
 
     def angle2dutyratio(self, angle):
         """
-        角度をDuty比に変換
+        convert angle to duty-ratio
         """
         if angle < self.min_angle + ANGLE_MARGIN:
             angle = self.min_angle + ANGLE_MARGIN
@@ -122,9 +121,9 @@ class MyServo():
         return duty_ratio
 
 
-class MyServoHW(MyServo):
+class SG90HW(SG90):
     """
-    ハードウェアPWMによるサーボモータ(SG90)の操作
+    Control of SG90 by Hardwar-PWM
       -----------------------------
       input   : duty ratio
       -----------------------------
@@ -135,31 +134,31 @@ class MyServoHW(MyServo):
     """
     def setup(self):
         """
-        GPIOのセットアップ
+        GPIO setup
         """
         try:
-            self.pwm = pigpio.pi()  # GPIOのセットアップ
-            self.pwm.set_mode(self.gpio, pigpio.OUTPUT)
+            self.pwm = pigpio.pi()                       # create Hardware-PWM-object
+            self.pwm.set_mode(self.gpio, pigpio.OUTPUT)  # set GPIO for output
 
         except:
             self.cleanup()
 
     def cleanup(self):
         """
-        GPIOのクリーンアップ
+        GPIO cleanup
         """
-        self.pwm.set_mode(self.gpio, pigpio.INPUT)  # 入力に戻す
+        self.pwm.set_mode(self.gpio, pigpio.INPUT)  # return GPIO to input
         self.pwm.stop()
 
     def move(self, angle):
         """
-        移動
+        move to angle
         """
         self.pwm.hardware_PWM(self.gpio, self.frequency, int(self.angle2dutyratio(angle) * MEGA))
 
     def rotate(self, src_angle, dst_angle, step=1):
         """
-        回転
+        rotate from src_angle to dst_angle
         """
         start = int(src_angle / self.resolution)
         end = int(dst_angle / self.resolution) + 1
@@ -171,7 +170,7 @@ class MyServoHW(MyServo):
 
 def swing_servo(servo):
     """
-    サーボをスイングする
+    swing servo
     """
     servo.setup()
 
@@ -184,7 +183,7 @@ def swing_servo(servo):
 
 
 if __name__ == '__main__':
-    swing_servo(MyServo(18))
-    swing_servo(MyServo(19))
-    swing_servo(MyServoHW(18))
-    swing_servo(MyServoHW(19))
+    swing_servo(SG90(18))
+    swing_servo(SG90(19))
+    swing_servo(SG90HW(18))
+    swing_servo(SG90HW(19))
