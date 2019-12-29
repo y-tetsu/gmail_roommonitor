@@ -1,3 +1,0 @@
-[submodule "raspberrypi_lib"]
-	path = raspberrypi_lib
-	url = https://github.com/y-tetsu/raspberrypi_lib.git
