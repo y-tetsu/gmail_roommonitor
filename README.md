@@ -1,5 +1,5 @@
-# gmail_picamera
-Raspberry Piで作るgmailで操作するpicamera
+# gmail_roommonitor
+Raspberry Piで作るgmailで操作するルームモニター
 
 ## 必要機材
 - ラズベリーパイ : Raspberry Pi 3 Model B    × 1
